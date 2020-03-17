@@ -1,0 +1,33 @@
+---
+ - name: example with debug , 
+   hosts: cisco-routers
+   connection: local
+   gather_facts: false
+
+
+   tasks:
+     - name: get facts
+       ios_facts:
+           gather_subset: all
+      
+     - name: Show ansible_net_all_ipv4_addresses fact 
+       debug: var=ansible_net_all_ipv4_addresses
+
+     - name: Show ansible_net_interfaces fact 
+       debug: var=ansible_net_interfaces['FastEthernet0/0']
+
+ - name: Collect IOS facts , 
+   hosts: cisco-routers
+   connection: local
+   gather_facts: false
+
+
+   tasks:
+     - name: get facts
+       ios_facts:
+           gather_subset: all
+       register: ios_facts_result
+     - name: Copy facts to files
+       copy:
+        content: "{{ ios_facts_result | to_nice_json}}"
+        dest: "/home/user/ansible/{{inventory_hostname}}_facts.json"
