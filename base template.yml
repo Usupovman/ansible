@@ -1,0 +1,58 @@
+---
+- name:  show run #  это первый Play . тут задаем имя  
+  hosts: all # тут указываем созданный в Файле hosts  список хостов , либо all для всех устройств 
+  gather_facts: false #  этот параметр отменяет сбор фактов об оборудовании. 
+
+
+  tasks: 
+   - raw: show run #  это уже task  первого плея , row это модуль  
+
+
+- name: Run ip arp routers  # это второй плей , тут задаем имя для него 
+  hosts:  cisco-routers # так же указываем список хостов , в данном случае он задан конкретно . 
+  gather_facts: false
+
+  tasks:
+    - name: show arp # можно также указать имя для таска , тогда raw будет без "-" 
+      raw: show ip arp 
+
+    - name: show version # в одном таске  может быть несколько команд 
+      raw: show version 
+
+
+
+- name: Use register and debug    # это третий плей , c выводом информации на экран.    
+  hosts: R1 # можно указаывать конкретное устройство, по имени заданному в hosts 
+  gather_facts: false
+
+  tasks:
+    - name: show vlans
+      raw: show vlans
+      register: sh_vlan_result # registr сохраняет результат выполнения в переменную
+
+    - name: Debug registred var # будем отображать содержание переменной sh_vlan_bri_result 
+      debug: var=sh_vlan_result.stdout_lines # модуль debug позваляет отображать инфо на стандарнтый поток 
+                                             # вывода, обратите внимание что выводится не все содержимое
+                                             # переменной sh_vlan_bri_result
+
+- name: Use when # это 4 плей, он будет выполнятся только когда возникает исключение, тут используется when. 
+ 
+  hosts: cisco-routers
+  gather_facts: false
+
+  tasks:
+    - name: show ip int br
+      raw: shh ip int bri | ex unass # тут задана команда с ошибкой !
+      register: sh_ip_int_br_result # записываем вывод в переменную
+
+    - name: debug register var
+      debug:
+        msg: "Error in command" # будет выведенно это сообщение при выполнении условия whem
+      when: "'invalid' in sh_ip_int_br_result.stdout" # тут заданно условие, нахождения 'invalid' в переменной
+
+
+
+
+
+
+
