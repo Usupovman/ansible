@@ -1,7 +1,7 @@
 --- 
 
 - name:  first example 
-  hosts: cisco-routers
+  hosts: cisco_routers
   gather_facts: false # для сетевого оборудования выключаем , т.к. используются свои модули для сбора фактов
   connection: local # для сетевого оборудования всегда указываем local 
 
@@ -16,7 +16,7 @@
       debug: var=sh_vr.stdout_lines
 
 - name : second example
-  hosts: cisco-routers
+  hosts: cisco_routers
   gather_facts: false
   connection: local
 
@@ -32,7 +32,7 @@
       debug: var=show_result.stdout_lines
 
 - name: example with wait_for
-  hosts: cisco-routers
+  hosts: cisco_routers
   gather_facts: false
   connection: local
 

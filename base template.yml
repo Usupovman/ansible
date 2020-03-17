@@ -9,7 +9,7 @@
 
 
 - name: Run ip arp routers  # это второй плей , тут задаем имя для него 
-  hosts:  cisco-routers # так же указываем список хостов , в данном случае он задан конкретно . 
+  hosts:  cisco_routers # так же указываем список хостов , в данном случае он задан конкретно . 
   gather_facts: false
 
   tasks:
@@ -37,7 +37,7 @@
 
 - name: Use when # это 4 плей, он будет выполнятся только когда возникает исключение, тут используется when. 
  
-  hosts: cisco-routers
+  hosts: cisco_routers
   gather_facts: false
 
   tasks:
