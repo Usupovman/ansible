@@ -1,0 +1,7 @@
+--- 
+cli:
+  host: "{{ inventory_hostname }}"
+  username: "admin"
+  password: 1111
+  transport: cli
+  
