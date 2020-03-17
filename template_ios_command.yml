@@ -1,51 +1,46 @@
 --- 
-""" модуль ios_command - отправляет команду show на устройство под управлением IOS и возвращает 
-результат выполнения команды .
 
-Модуль ios_command не поддерживает отправку команд в конфигурационном
-режиме. Для этого используется отдельный модуль - ios_config. """
-
-- name:  example with argumetns in task 
+- name:  first example 
   hosts: cisco-routers
   gather_facts: false # для сетевого оборудования выключаем , т.к. используются свои модули для сбора фактов
   connection: local # для сетевого оборудования всегда указываем local 
 
 
-  task: # пример задания всех аргументов в задаче (task)
+  tasks: # пример задания всех аргументов в задаче (task)
     - name: run show version
       ios_command:
-        host: "{{ inventory_hosts }}"
         commands: show version
-        username: admin # задан прямо в таске 
-        password: 1111 # так же задан в таске 
-        transport: cli #  и этот тоже 
+      register: sh_vr # register находится на одном уровне с name , а не commands
+    
+    - name: Debug registred var 
+      debug: var=sh_vr.stdout_lines
 
-- name: example with argumetns in var from playbook # тут аргументы создаются как пременная clii затем 
-  hosts: cisco-routers                              # передаются как переменная аргументу provider
+- name : second example
+  hosts: cisco-routers
   gather_facts: false
   connection: local
 
-  vars:
-    clii:
-      host: "{{ inventory_hosts }}"
-      username: admin
-      password: 1111
-      transport: cli
-
-  task:
-    - name: run show version
+  tasks:
+    - name: run show commands
       ios_command:
-        commands: show version
-        provider: "{{ clii }}"
+        commands:
+          - show ip int bri  # когда задаем две и более команды , то синтаксис 
+          - show ip route    # немного другой , команды указываем как список yaml
+      register: show_result
 
+    - name: Debug registred var
+      debug: var=show_result.stdout_lines
 
-- name : example with argumetns in group_vars # самый удобный вариант , задавать аргументы в
-  hosts: cisco-routers                        # каталоге group_vars.
+- name: example with wait_for
+  hosts: cisco-routers
   gather_facts: false
   connection: local
 
-  task:
-    - name: run show version
-      ios_command:
-        commands: show version
-        provider: "{{ cli }}" # эта переменная заданна в файле group_vars/all.yml
+  tasks: 
+    - name: run ping  
+      ios_command: 
+        commands: ping 10.101.101.137 # отправляем пинг
+        wait_for:  # далее проверяем есть ли в выводе фраза "Success..."
+          - result[0] contains 'Success rate is 100 percent' # если фраза содержится то все ок
+        retries: 2 # указываем кол-во попыток выполнить команду ( по умолчанию 10)
+        interval: 10 # указываем интервал между попытками  
