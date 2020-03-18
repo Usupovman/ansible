@@ -1,0 +1,9 @@
+---
+hostname: moscow_r1
+mgmt_loopback: 100
+mgmt_ip: 10.0.0.1
+ospf_ints:
+  - 192.168.10.1
+  - 10.0.10.1
+  - 10.255.1.1
+  
