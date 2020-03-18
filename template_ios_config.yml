@@ -1,16 +1,19 @@
 ---
-- name: Run cfg commands on routers
+# используем параметр lines 
+- name: Run cfg with parametr 'lines'(commands)
   hosts: cisco_routers
   gather_facts: false 
   connection: local
 
-  tasks:
+  tasks: 
     - name: Config password encryption 
       ios_config:
         lines:
           - service password-encryption
 
-- name: exmaple with several commands
+
+# используем параметр lines  и задаем несколько команда 
+- name: exmaple with with parametr 'lines' and several commands
   hosts: cisco_routers
   gather_facts: false 
   connection: local
@@ -23,4 +26,246 @@
           - no ip http server
           - no ip http secure-server
           - no ip domain lookup 
+
+
+
+# используем параметр parents , используется чтоб указать в каком подрежиме применить коанды 
+- name: Rn cfg with 'parents' parametr
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks: 
+    # - name: Config line vty 
+    #   ios_config:
+    #     parents:
+    #       - line vty 0 4 # указываем режим в которм будут вводится конады 
+    #     lines:
+    #       - login local # собственно сами комады 
+    #       - transport input ssh 
+
+    - name: add description on interface 
+      ios_config:
+        parents:
+          - interface fastetherne0/0 # еще один пример 
+        lines: description to_inet
+
+
+
+# Если команда находится в нескольких вложенных режимах, подрежимы указываются в списке parents.
+- name: exmaple with two parents 
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Config QoS policy
+      ios_config:
+        parents:
+          - policy-map OUT_QOS
+          - class class-default
+        lines:
+          - shape average 100000000 1000000
+
+# сохраняем конфиг если были внесены изменения 
+
+- name: save run cfg  
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name : seve run cfg 
+      ios_config:
+        save_when: modified # тут так же может стоять флагиэ: always - сохранять всегда , never-никогда
+
+
+# отображение информации, только если есть изменения .
+#  не работает 
+# - name: show changes 
+#   hosts: cisco_routers
+#   gather_facts: false
+#   connection: local
+
+#   tasks:
+#     - name: config int fa1/0
+#       ios_config:
+#         parents:
+#           - interface fastethernet1/0
+#         lines:
+#           - description to_client 
+#           - no shutdown 
+#       register: cfg 
+
+
+#     - name: show config updates
+#       debug: var=cfg.updates
+#       when: cfg.changed
+
+
+
+# создаем резервную копию , изспользуя параменетр backup 
+
+- name: Run cfg with backup 
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: shut int fa1/0
+      ios_config:
+        parents:
+          - interface fastethernet1/0
+        lines:
+          - shutdown
+        backup: yes # будет создан бекап в каталогe backup
+   
+
+# Параметр defaults указывает, нужно ли собирать всю информацию с устройства, 
+# в том числе и значения по умолчанию. не работает нормально ! 
+
+- name: Run with 'defaults' parametr
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: config interface 
+      ios_config:
+        parents:
+          - interface fastethernet1/0
+        lines:
+          - ip address 192.168.10.1 255.255.255.0
+          - ip mtu 1500
+        defaults: yes 
+
+
+# Параметр after указывает, 
+# какие команды выполнить после команд в списке lines (или commands).
+
+
+- name: Run with 'after' parametr
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks: 
+    - name: config with after
+      ios_config:
+        parents:
+          - interface fastethernet3/0
+        lines:
+          - ip address 192.168.170.1 255.255.255.0
+        after: 
+          - no shutdown
+          - end
+          # - write не работает 
           
+
+
+
+
+# Параметр before указывает, какие действия выполнить до команд в списке lines.
+
+- name: Run with 'before' parametr
+  hosts: R2 # этот таск нормально работает только для однго устройства  
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: config with before
+      ios_config:
+        before:
+          - no ip access-list extended IN_OUT # сначала удалить лист IN_OUT если он есть 
+        parents:
+          - ip access-list extended IN_OUT   # лишь затем создать снова , при этом 
+        lines: # сначала скрипт сравнивает чего не хватает 
+               # затем добавляет только то чего не хватало , даже после удаления аксес листа 
+               # при сравнении очередность не имеет занчения, если важна очередность см ниже
+          - permit tcp 10.0.1.0 0.0.0.255 any eq www
+          - permit tcp 10.0.1.0 0.0.0.255 any eq 22
+          - permit icmp any any 
+          - deny ip any any  
+
+
+
+
+# Параметр match указывает, как именно нужно сравнивать команды (что считается изменением):
+# Режим match: line используется по умолчанию. пример выше . 
+
+# match: exact . Пример, в котором порядок команд важен.
+- name: Run cfg with match exact
+  hosts: R1
+  gather_facts: false
+  connection: local
+
+  tasks:
+
+    - name: Config ACL with exact
+      ios_config:
+        before: # важно удалять старый аксесс лист 
+          - no ip access-list extended IN_OUT
+        parents:
+          - ip access-list extended IN_OUT
+        lines: # в этом случае будет проверятся весь список команда , и их порядок 
+          - permit tcp 10.0.1.0 0.0.0.255 any eq www # если хоть что то не совпаден ,  
+          - permit tcp 10.0.1.0 0.0.0.255 any eq 22  # то скрипт будет выполнен
+          - permit icmp any any # для этого варианта важно что бы старая команда удалялась 
+          - deny   ip any any   
+        match: exact 
+
+
+
+# Использование match: none отключает идемпотентность задачи: 
+# каждый раз при выполнении playbook будут отправляться команды, которые указаны в задаче.
+- name: Run cfg with match none
+  hosts: R1 
+  gather_facts: false
+  connection: local
+
+  tasks:
+
+    - name: Config ACL
+      ios_config:
+        before:
+          - no ip access-list extended IN_to_OUT
+        parents:
+          - ip access-list extended IN_to_OUT
+        lines:
+          - permit tcp 10.0.1.0 0.0.0.255 any eq www
+          - permit tcp 10.0.1.0 0.0.0.255 any eq 22
+          - permit icmp any any
+        match: none 
+
+
+
+
+# Параметр src позволяет указывать путь к файлу конфигурации или шаблону конфигурации, 
+# которыю нужно загрузить на устройство.
+- name: run cfg commnds from file 
+  hosts: R1
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: config ACL with src 
+      ios_config:
+        src: templates/acl_cfg.txt
+
+
+# В параметре src можно указывать шаблон Jinja2.
+
+- name: Run cfg Jinja2 template 
+  hosts: cisco_routers
+  gather_facts: false
+  connection: local
+
+  tasks:
+
+    - name: Config OSPF
+      ios_config:
+        src: templates/ospf.j2
+
+    - name: add hostname 
+      ios_config:
+        src: templates/hostname.j2
